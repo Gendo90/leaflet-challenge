@@ -8,3 +8,7 @@ body,
 html {
   height: 100%;
 }
+
+.circleIcon {
+  background-color: hsla(50, 0%, 0%, 0.0);
+}
