@@ -27,6 +27,11 @@ let baseLayers = {
     })
 }
 
+let overlays = [{
+    "Markers": L.layerGroup()
+    // "Tectonic Plates": L.layerGroup()
+}]
+
 // Create a legend to display information about our map
 var info = L.control({
     position: "bottomright"
@@ -46,7 +51,7 @@ info.onAdd = function () {
 //     accessToken: API_KEY
 // }).addTo(myMap);
 
-L.control.layers(baseLayers).addTo(myMap);
+
 
 
 
@@ -63,36 +68,51 @@ let counter = 0;
 let colorCutoffDepths = [10, 30, 50, 70, 90]
 let colorMap = { 0: "00FFFF", 1: "00FF00", 2: "80FF00", 3: "FFFF00", 4: "FF8000", 5: "FF0000"};
 
-d3.json(USGS_url, function(data) {
-    for (let i = 0; i < data.features.length; i++) {
-        let curr_quake = data.features[i]
-        let quake_time = new Date(curr_quake.properties["time"])
-        let mag_scale = curr_quake.properties["mag"]
-        let quake_depth = curr_quake.geometry.coordinates[2];
+fetch(USGS_url).then(data => data.json()).then(
+        function(data) {
+            for (let i = 0; i < data.features.length; i++) {
+                let curr_quake = data.features[i]
+                let quake_time = new Date(curr_quake.properties["time"])
+                let mag_scale = curr_quake.properties["mag"]
+                let quake_depth = curr_quake.geometry.coordinates[2];
 
-        let curr_color = colorMap[colorCutoffDepths.reduce((a, b, i) => b<quake_depth ? i+1 : a, 0)]
+                let curr_color = colorMap[colorCutoffDepths.reduce((a, b, i) => b<quake_depth ? i+1 : a, 0)]
 
-        let markerIcon = L.divIcon({
-            html: `<svg width="${mag_scale * 10}" height="${mag_scale * 10}">
-                                <circle cx="${mag_scale * 5}" cy="${mag_scale * 5}" r="${mag_scale * 4}" stroke="black" stroke-width="1" fill=${"#"+curr_color} />
-                                </svg>`,
-            iconAnchor: L.point([mag_scale * 5, mag_scale * 5]), 
-            className: "circleIcon"
-        });
+                let markerIcon = L.divIcon({
+                    html: `<svg width="${mag_scale * 10}" height="${mag_scale * 10}">
+                                        <circle cx="${mag_scale * 5}" cy="${mag_scale * 5}" r="${mag_scale * 4}" stroke="black" stroke-width="1" fill=${"#"+curr_color} />
+                                        </svg>`,
+                    iconAnchor: L.point([mag_scale * 5, mag_scale * 5]), 
+                    className: "circleIcon"
+                });
 
-        let curr_item = L.marker([curr_quake.geometry.coordinates[1], curr_quake.geometry.coordinates[0]], {icon: markerIcon})
-        curr_item.bindPopup("Magnitude: " + mag_scale +"<br>" + 
-                            "Depth: " + quake_depth + "<br>" +
-                            "Time: " + quake_time.toString());
+                let curr_item = L.marker([curr_quake.geometry.coordinates[1], curr_quake.geometry.coordinates[0]], {icon: markerIcon})
+                curr_item.bindPopup("Magnitude: " + mag_scale +"<br>" + 
+                                    "Depth: " + quake_depth + "<br>" +
+                                    "Time: " + quake_time.toString());
 
-        curr_item.addTo(myMap);
-        counter++;
-        // console.log(counter)
-    }
+                // curr_item.addTo(myMap);
+                if(mag_scale >= 0) {
+                    overlays[0]["Markers"].addLayer(curr_item)
+                    counter++;
+                    console.log(curr_item)
+                }
+                
+            }
 
-    // now add the legend!
-    addLegend(colorCutoffDepths, colorMap)
-})
+            // now add the legend!
+            addLegend(colorCutoffDepths, colorMap)
+
+}).then(
+    // now add the layers!
+    () => L.control.layers(baseLayers, overlays[0]).addTo(myMap))
+
+
+    // L.control.layers(baseLayers, overlays).addTo(myMap)
+
+
+// add all layers to myMap object once all layers have been populated with markers/polylines
+
 
 // Add legend to map - function defined here
 function makeSwatch(color, size) {
