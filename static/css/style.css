@@ -12,3 +12,14 @@ html {
 .circleIcon {
   background-color: hsla(50, 0%, 0%, 0.0);
 }
+
+.legend {
+  background-color: beige;
+  padding-left: 8px;
+  padding-right: 8px;
+  padding-bottom: 3px;
+}
+
+span {
+  white-space: pre;
+}
