@@ -74,6 +74,7 @@ function setMarkers(data) {
         let curr_quake = data.features[i]
         let quake_time = new Date(curr_quake.properties["time"])
         let mag_scale = curr_quake.properties["mag"]
+        let quake_location = curr_quake.properties["place"]
         let quake_depth = curr_quake.geometry.coordinates[2];
 
         let curr_color = colorMap[colorCutoffDepths.reduce((a, b, i) => b<quake_depth ? i+1 : a, 0)]
@@ -89,6 +90,7 @@ function setMarkers(data) {
         let curr_item = L.marker([curr_quake.geometry.coordinates[1], curr_quake.geometry.coordinates[0]], {icon: markerIcon})
         curr_item.bindPopup("Magnitude: " + mag_scale +"<br>" + 
                             "Depth: " + quake_depth + "<br>" +
+                            "Location: " + quake_location + "<br>" +
                             "Time: " + quake_time.toString());
 
         //cleans data by removing invalid magnitudes (negative magnitudes are meaningless)
