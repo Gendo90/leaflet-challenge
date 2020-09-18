@@ -113,7 +113,7 @@ function addPlates(pl) {
 //add legend
 //and add overlays to map
 Promise.all([fetch(USGS_url).then(data => data.json()), fetch(tectonicPlatesURL).then(data => data.json()).then((data) => {
-    //need to reverse the coordinates and then update negative long values by adding 360 so map wraps around
+    //need to reverse the coordinates to get in the correct format for leaflet
     for (let i = 0; i < data.features.length; i++) {
         data.features[i].coordinates = data.features[i].geometry.coordinates.map((a) => a.reverse())
     }
@@ -126,6 +126,14 @@ Promise.all([fetch(USGS_url).then(data => data.json()), fetch(tectonicPlatesURL)
     addLegend(colorCutoffDepths, colorMap)
     // add all layers to myMap object once all layers have been populated with markers/polylines
     L.control.layers(baseLayers, overlays[0]).addTo(myMap)
+})
+.then(() => {
+    //set initial base layer and overlays here
+    document.querySelector(".leaflet-control-layers-base").firstElementChild.click()
+    let overlays = document.querySelector(".leaflet-control-layers-overlays").children
+    for (let i = 0; i < overlays.length; i++) {
+        overlays[i].click()
+    }
 })
 
 
@@ -146,6 +154,8 @@ function makeSwatch(color, size) {
 
     colorSwatch.textContent = text;
 
+    //OLD CODE THAT TRIED TO ADD AN SVG FOR A SWATCH
+    //TOO HARD TO ADD AN SVG DIRECTLY - NEED SPECIAL CODE
     // let rect = document.createElement("rect");
     // // rect.style.width = size + "px";
     // // rect.style.height = size + "px";
