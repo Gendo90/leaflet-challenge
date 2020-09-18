@@ -28,8 +28,8 @@ let baseLayers = {
 }
 
 let overlays = [{
-    "Markers": L.layerGroup()
-    // "Tectonic Plates": L.layerGroup()
+    "Markers": L.layerGroup(),
+    "Tectonic Plates": L.layerGroup()
 }]
 
 // Create a legend to display information about our map
@@ -62,56 +62,71 @@ info.addTo(myMap);
 // get geoJSON data and add markers to map
 
 let USGS_url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
+let tectonicPlatesURL = "https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json";
 
 let counter = 0;
 
 let colorCutoffDepths = [10, 30, 50, 70, 90]
 let colorMap = { 0: "00FFFF", 1: "00FF00", 2: "80FF00", 3: "FFFF00", 4: "FF8000", 5: "FF0000"};
 
-fetch(USGS_url).then(data => data.json()).then(
-        function(data) {
-            for (let i = 0; i < data.features.length; i++) {
-                let curr_quake = data.features[i]
-                let quake_time = new Date(curr_quake.properties["time"])
-                let mag_scale = curr_quake.properties["mag"]
-                let quake_depth = curr_quake.geometry.coordinates[2];
+function setMarkers(data) {
+    for (let i = 0; i < data.features.length; i++) {
+        let curr_quake = data.features[i]
+        let quake_time = new Date(curr_quake.properties["time"])
+        let mag_scale = curr_quake.properties["mag"]
+        let quake_depth = curr_quake.geometry.coordinates[2];
 
-                let curr_color = colorMap[colorCutoffDepths.reduce((a, b, i) => b<quake_depth ? i+1 : a, 0)]
+        let curr_color = colorMap[colorCutoffDepths.reduce((a, b, i) => b<quake_depth ? i+1 : a, 0)]
 
-                let markerIcon = L.divIcon({
-                    html: `<svg width="${mag_scale * 10}" height="${mag_scale * 10}">
-                                        <circle cx="${mag_scale * 5}" cy="${mag_scale * 5}" r="${mag_scale * 4}" stroke="black" stroke-width="1" fill=${"#"+curr_color} />
-                                        </svg>`,
-                    iconAnchor: L.point([mag_scale * 5, mag_scale * 5]), 
-                    className: "circleIcon"
-                });
+        let markerIcon = L.divIcon({
+            html: `<svg width="${mag_scale * 10}" height="${mag_scale * 10}">
+                                <circle cx="${mag_scale * 5}" cy="${mag_scale * 5}" r="${mag_scale * 4}" stroke="black" stroke-width="1" fill=${"#"+curr_color} />
+                                </svg>`,
+            iconAnchor: L.point([mag_scale * 5, mag_scale * 5]), 
+            className: "circleIcon"
+        });
 
-                let curr_item = L.marker([curr_quake.geometry.coordinates[1], curr_quake.geometry.coordinates[0]], {icon: markerIcon})
-                curr_item.bindPopup("Magnitude: " + mag_scale +"<br>" + 
-                                    "Depth: " + quake_depth + "<br>" +
-                                    "Time: " + quake_time.toString());
+        let curr_item = L.marker([curr_quake.geometry.coordinates[1], curr_quake.geometry.coordinates[0]], {icon: markerIcon})
+        curr_item.bindPopup("Magnitude: " + mag_scale +"<br>" + 
+                            "Depth: " + quake_depth + "<br>" +
+                            "Time: " + quake_time.toString());
 
-                // curr_item.addTo(myMap);
-                if(mag_scale >= 0) {
-                    overlays[0]["Markers"].addLayer(curr_item)
-                    counter++;
-                    console.log(curr_item)
-                }
-                
-            }
+        //cleans data by removing invalid magnitudes (negative magnitudes are meaningless)
+        if(mag_scale >= 0) {
+            overlays[0]["Markers"].addLayer(curr_item)
+        }   
+    }
+}
 
-            // now add the legend!
-            addLegend(colorCutoffDepths, colorMap)
+function addPlates(pl) {
+    //now add the tectonic plate polygons
+    for (let i = 0; i < pl.features.length; i++) {
+        coords = pl.features[i].geometry.coordinates
+        let curr_plate = L.polyline(coords, {weight: 3})
+        overlays[0]["Tectonic Plates"].addLayer(curr_plate)
+        console.log(i)
+    }
+}
 
-}).then(
-    // now add the layers!
-    () => L.control.layers(baseLayers, overlays[0]).addTo(myMap))
-
-
-    // L.control.layers(baseLayers, overlays).addTo(myMap)
-
-
-// add all layers to myMap object once all layers have been populated with markers/polylines
+//get both fetch events to give the JSON data, then 
+//put into the overlays
+//add legend
+//and add overlays to map
+Promise.all([fetch(USGS_url).then(data => data.json()), fetch(tectonicPlatesURL).then(data => data.json()).then((data) => {
+    //need to reverse the coordinates and then update negative long values by adding 360 so map wraps around
+    for (let i = 0; i < data.features.length; i++) {
+        data.features[i].coordinates = data.features[i].geometry.coordinates.map((a) => a.reverse())
+    }
+    return data
+})])
+.then(([markers, plates]) => {
+    setMarkers(markers);
+    addPlates(plates);
+    // now add the legend!
+    addLegend(colorCutoffDepths, colorMap)
+    // add all layers to myMap object once all layers have been populated with markers/polylines
+    L.control.layers(baseLayers, overlays[0]).addTo(myMap)
+})
 
 
 // Add legend to map - function defined here
